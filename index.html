@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Binary tree visitor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        div#control {
+            width: 100%;
+            position: fixed;
+            bottom: 0px;
+            left: 0px;
+            z-index: +1;
+            background-color: rgb(59, 4, 111);
+            color: rgb(255, 255, 255);
+
+        }
+
+        span#com0 {
+            font-size: smaller;
+        }
+
+        button#h_b {
+            position: fixed;
+            bottom: 0px;
+            right: 0px;
+            z-index: +1;
+        }
+
+        #Auth_name {
+            text-align: center;
+        }
+
+        textarea {
+            width: 80%;
+            resize: none;
+        }
+    </style>
+    <script src="tree.js"></script>
+</head>
+<html lang="en">
+
+<body>
+    <h6>Binary insert:</h6>
+    <div id="tree_view"></div>
+    <pre>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            </pre>
+    <div id="control">
+        <pre></pre>
+        <span id="comment_s"></span>
+        <span id=""></span>
+        <textarea id="input_s" name="textarea" rows="2" readonly>
+
+        </textarea>
+        <br>
+        <span>Inorder: </span><span id="inorder"></span><br>
+        <span>Postorder: </span><span id="postorder"></span><br>
+        <span>Preorder: </span><span id="preorder"></span><br>
+        <span>Search-order: </span><span id="Search-order"></span><br><br>
+        <div id="input"><span> Input: </span><input class="ip2" type="text" placeholder="a,b,c,d..." pattern=""
+                id="inputId2" value="" onchange=fn2()><button type="button" onclick=fn2()>insert</button></div>
+        <span id="com0">Enter single key or multiple key separet by comma.</span>
+        <div id="input4"><span>&#x1F50D;</span><input class="ip2" type="text" placeholder="a" pattern="" id="inputId4"
+                value="" size=1 onchange=scearch_elm(ref2)><button type="button"
+                onclick=scearch_elm(ref2)>scearch</button></div>
+        <div id="input5"><span>&#128465;</span><input class="ip4" type="text" placeholder="a" pattern="" id="inputId5"
+                value="" size=1 onchange=delete_node(ref2)><button type="button"
+                onclick=delete_node(ref2)>delete</button></div><br>
+        <div id="t_length"><span>Tree font: </span><input class="ip3" type="numb" placeholder="numb" pattern=".{1,}"
+                id="inputId3" value="1" maxlength='1' size='1' onchange=view_tree(ref2)></div>
+        <button type="button" onclick=reset()>reset</button> <button type="button" onclick=reset_tree(ref2)>reset
+            color</button>
+        <div id="status"></div>
+        <button onclick="downloadImage('svg')">Download SVG (Original)</button>
+        <button onclick="downloadImage('png')">Download PNG (High-Res)</button>
+        <button onclick="downloadImage('jpg')">Download JPG (High-Res)</button>
+
+        <pre id="Auth_name">Made by Dipankar Kr. Roy</pre>
+    </div>
+    <button id="h_b" type="button" onclick=but_h()>Hide panel</button>
+    <script>
+        function but_h() {
+            var x = document.getElementById("control");
+            if (x.style.display === "none") {
+                x.style.display = "block";
+                document.getElementById("h_b").innerHTML = "Hide panel";
+            } else {
+                x.style.display = "none";
+                document.getElementById("h_b").innerHTML = "Show panel";
+            }
+        }
+
+        function downloadImage(format) {
+            const statusElement = document.getElementById('status');
+            statusElement.textContent = '';
+
+            try {
+                const svgElement = document.querySelector('#tree_view svg');
+
+                if (!svgElement) {
+                    throw new Error('No SVG found inside the tree_view container');
+                }
+
+                switch (format) {
+                    case 'svg':
+                        downloadOriginalSVG(svgElement);
+                        statusElement.textContent = 'SVG download started';
+                        break;
+                    case 'png':
+                    case 'jpg':
+                        downloadHighResRaster(svgElement, format);
+                        statusElement.textContent = `Generating high-resolution ${format.toUpperCase()}...`;
+                        break;
+                    default:
+                        throw new Error('Unsupported format');
+                }
+            } catch (error) {
+                statusElement.textContent = error.message;
+                console.error(error);
+            }
+        }
+
+        function downloadOriginalSVG(svgElement) {
+            const clonedSvg = svgElement.cloneNode(true);
+
+            if (!clonedSvg.getAttribute('xmlns')) {
+                clonedSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+            }
+
+            const serializer = new XMLSerializer();
+            let svgStr = serializer.serializeToString(clonedSvg);
+
+            svgStr = '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n' +
+                '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n' +
+                svgStr;
+
+            const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            triggerDownload(url, 'image.svg');
+
+            setTimeout(() => URL.revokeObjectURL(url), 100);
+        }
+
+        function downloadHighResRaster(svgElement, format) {
+            return new Promise((resolve, reject) => {
+                try {
+                    const clonedSvg = svgElement.cloneNode(true);
+                    const [origWidth, origHeight] = getSvgDimensions(clonedSvg);
+                    const scale = calculateScaleFactor(origWidth, origHeight);
+                    const scaledWidth = Math.round(origWidth * scale);
+                    const scaledHeight = Math.round(origHeight * scale);
+
+                    clonedSvg.setAttribute('width', scaledWidth);
+                    clonedSvg.setAttribute('height', scaledHeight);
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = scaledWidth;
+                    canvas.height = scaledHeight;
+                    const ctx = canvas.getContext('2d');
+
+                    if (format === 'jpg') {
+                        ctx.fillStyle = 'white';
+                        ctx.fillRect(0, 0, scaledWidth, scaledHeight);
+                    }
+
+                    const img = new Image();
+                    img.onload = function () {
+                        try {
+                            ctx.drawImage(img, 0, 0, scaledWidth, scaledHeight);
+
+                            const mimeType = format === 'png' ? 'image/png' : 'image/jpeg';
+                            const extension = format === 'png' ? 'png' : 'jpg';
+                            const quality = format === 'jpg' ? 0.95 : undefined; 
+
+                            canvas.toBlob((blob) => {
+                                const url = URL.createObjectURL(blob);
+                                triggerDownload(url, `image.${extension}`);
+                                setTimeout(() => URL.revokeObjectURL(url), 100);
+                                resolve();
+                            }, mimeType, quality);
+                        } catch (error) {
+                            reject(error);
+                        }
+                    };
+
+                    img.onerror = () => reject(new Error('Failed to load SVG image'));
+                    img.src = 'data:image/svg+xml;charset=utf-8,' +
+                        encodeURIComponent(new XMLSerializer().serializeToString(clonedSvg));
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }
+
+       
+        function getSvgDimensions(svg) {
+            let width, height;
+
+            
+            if (svg.hasAttribute('viewBox')) {
+                const vb = svg.getAttribute('viewBox').split(/\s+|,/).filter(Boolean);
+                width = parseFloat(vb[2]) || 300;
+                height = parseFloat(vb[3]) || 150;
+            }
+            
+            else {
+                width = parseFloat(svg.getAttribute('width')) || 300;
+                height = parseFloat(svg.getAttribute('height')) || 150;
+            }
+
+            return [width, height];
+        }
+        function calculateScaleFactor(width, height) {
+            const MIN_DIMENSION = 2000; 
+            const currentMax = Math.max(width, height);
+            if (currentMax >= MIN_DIMENSION) return 1;
+            return MIN_DIMENSION / currentMax;
+        }
+
+        function triggerDownload(url, filename) {
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            setTimeout(() => document.body.removeChild(link), 100);
+        }
+
+    </script>
+</body>
+
+</html>
